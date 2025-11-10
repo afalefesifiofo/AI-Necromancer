@@ -1,0 +1,15 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. HELLO-WORLD.
+       
+       ENVIRONMENT DIVISION.
+       
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 WS-DESCRIPTION.
+          05 WS-NAME PIC A(30) VALUE 'JOHN DOE'.
+          05 WS-ID PIC 9(5) VALUE '12345'.
+       
+       PROCEDURE DIVISION.
+           DISPLAY 'Name: ' WS-NAME.
+           DISPLAY 'ID: ' WS-ID.
+           STOP RUN.
