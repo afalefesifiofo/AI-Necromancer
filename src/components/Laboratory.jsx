@@ -6,7 +6,7 @@ import DocumentationPanel from './DocumentationPanel';
 import { runArchaeologist } from '../agents/archaeologist';
 import { runNecromancer } from '../agents/necromancer';
 import { runChronicler } from '../agents/chronicler';
-import { KiroAgent } from '../services/kiroAgent';
+import { NecromancerService } from '../services/necromancerService';
 
 export default function Laboratory({ code, vibe, onReset }) {
   const [stage, setStage] = useState('analyzing');
@@ -14,10 +14,10 @@ export default function Laboratory({ code, vibe, onReset }) {
   const [revivedCode, setRevivedCode] = useState(null);
   const [documentation, setDocumentation] = useState(null);
   const [chronicle, setChronicle] = useState([]);
-  const [kiroAgent] = useState(() => new KiroAgent(vibe));
+  const [necromancerService] = useState(() => new NecromancerService(vibe));
 
   useEffect(() => {
-    kiroAgent.setVibe(vibe);
+    necromancerService.setVibe(vibe);
     resurrectCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, vibe]);
@@ -26,17 +26,17 @@ export default function Laboratory({ code, vibe, onReset }) {
     setStage('analyzing');
     setChronicle([]);
     
-    const analysisResult = await runArchaeologist(code, vibe, kiroAgent);
+    const analysisResult = await runArchaeologist(code, vibe, necromancerService);
     setAnalysis(analysisResult);
     setChronicle(prev => [...prev, analysisResult.narration]);
 
     setStage('reviving');
-    const revived = await runNecromancer(code, analysisResult, vibe, kiroAgent);
+    const revived = await runNecromancer(code, analysisResult, vibe, necromancerService);
     setRevivedCode(revived);
     setChronicle(prev => [...prev, revived.narration]);
 
     setStage('documenting');
-    const docs = await runChronicler(code, revived, analysisResult, vibe, kiroAgent);
+    const docs = await runChronicler(code, revived, analysisResult, vibe, necromancerService);
     setDocumentation(docs);
     setChronicle(prev => [...prev, docs.narration]);
 

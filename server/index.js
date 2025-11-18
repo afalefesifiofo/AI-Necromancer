@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { analyzeCode, modernizeCode, generateDocumentation } from './kiro-agent.js';
+import { analyzeCode, modernizeCode, generateDocumentation } from './openai-service.js';
 
 const app = express();
 const PORT = 3001;

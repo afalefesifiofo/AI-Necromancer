@@ -7,14 +7,14 @@ import ApiStatusBanner from './ApiStatusBanner';
 import { runArchaeologist } from '../agents/archaeologist';
 import { runNecromancer } from '../agents/necromancer';
 import { runChronicler } from '../agents/chronicler';
-import { KiroAgent } from '../services/kiroAgent';
+import { NecromancerService } from '../services/necromancerService';
 import JSZip from 'jszip';
 
 export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }) {
   const [processing, setProcessing] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState([]);
-  const [kiroAgent] = useState(() => new KiroAgent(vibe, targetLanguage));
+  const [necromancerService] = useState(() => new NecromancerService(vibe, targetLanguage));
   const [hasStarted, setHasStarted] = useState(false);
   const [apiError, setApiError] = useState(null);
   const [useFallbackMode, setUseFallbackMode] = useState(false);
@@ -22,8 +22,8 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
   useEffect(() => {
     if (!hasStarted && files && files.length > 0) {
       setHasStarted(true);
-      kiroAgent.setVibe(vibe);
-      kiroAgent.setTargetLanguage(targetLanguage);
+      necromancerService.setVibe(vibe);
+      necromancerService.setTargetLanguage(targetLanguage);
       processAllFiles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,15 +44,15 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
       try {
         // Analyze
         console.log('  - Analyzing...');
-        const analysis = await runArchaeologist([file], vibe, kiroAgent);
+        const analysis = await runArchaeologist([file], vibe, necromancerService);
         
         // Modernize
         console.log('  - Modernizing...');
-        const revived = await runNecromancer([file], analysis, vibe, kiroAgent, useFallbackMode);
+        const revived = await runNecromancer([file], analysis, vibe, necromancerService, useFallbackMode);
         
         // Document
         console.log('  - Documenting...');
-        const docs = await runChronicler([file], revived, analysis, vibe, kiroAgent);
+        const docs = await runChronicler([file], revived, analysis, vibe, necromancerService);
 
         processedResults.push({
           file,
@@ -87,6 +87,12 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
       }
 
       setResults([...processedResults]);
+      
+      // Add a small delay between files to avoid overwhelming the API
+      if (i < files.length - 1) {
+        console.log('⏱️  Waiting 500ms before next file...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
     console.log('Batch processing complete!');

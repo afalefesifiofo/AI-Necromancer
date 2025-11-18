@@ -1,7 +1,7 @@
-// Kiro Agent Service - handles AI interactions using Kiro API
-// ONLY uses real AI - no simulations
+// Necromancer Service - handles AI interactions for code resurrection
+// Communicates with backend OpenAI service
 
-export class KiroAgent {
+export class NecromancerService {
   constructor(vibe = 'necromancer', targetLanguage = 'modernize') {
     this.vibe = vibe;
     this.targetLanguage = targetLanguage;

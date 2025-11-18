@@ -1,5 +1,5 @@
-// Kiro Agent for AI Necromancer
-// This agent is invoked by the backend to perform AI operations
+// OpenAI Service for AI Necromancer
+// Handles all OpenAI API interactions for code analysis, modernization, and documentation
 
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -12,11 +12,48 @@ const __dirname = dirname(__filename);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// Rate limiting
+let lastApiCallTime = 0;
+const MIN_DELAY_BETWEEN_CALLS = 1000; // 1 second between calls
+
+// Sleep function
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // Function to call OpenAI GPT API
 async function callGPT(prompt, systemPrompt = 'You are a helpful AI assistant.') {
   if (!OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
   }
+
+  // Rate limiting: ensure minimum delay between API calls
+  const now = Date.now();
+  const timeSinceLastCall = now - lastApiCallTime;
+  if (timeSinceLastCall < MIN_DELAY_BETWEEN_CALLS) {
+    const delayNeeded = MIN_DELAY_BETWEEN_CALLS - timeSinceLastCall;
+    console.log(`⏱️  Rate limiting: waiting ${delayNeeded}ms before next API call...`);
+    await sleep(delayNeeded);
+  }
+  lastApiCallTime = Date.now();
+
+  const requestBody = {
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 4000,
+  };
+
+  console.log('\n🤖 === OpenAI API Request ===');
+  console.log('URL:', OPENAI_API_URL);
+  console.log('Model:', requestBody.model);
+  console.log('System Prompt:', systemPrompt.substring(0, 100) + '...');
+  console.log('User Prompt (first 200 chars):', prompt.substring(0, 200) + '...');
+  console.log('Temperature:', requestBody.temperature);
+  console.log('Max Tokens:', requestBody.max_tokens);
 
   const response = await fetch(OPENAI_API_URL, {
     method: 'POST',
@@ -24,25 +61,29 @@ async function callGPT(prompt, systemPrompt = 'You are a helpful AI assistant.')
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${OPENAI_API_KEY}`,
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    }),
+    body: JSON.stringify(requestBody),
   });
+
+  console.log('\n📡 === OpenAI API Response ===');
+  console.log('Status:', response.status, response.statusText);
 
   if (!response.ok) {
     const error = await response.json();
+    console.log('❌ Error Response:', JSON.stringify(error, null, 2));
     throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
   }
 
   const data = await response.json();
+  console.log('✅ Success!');
+  console.log('Response Length:', data.choices[0].message.content.length, 'characters');
+  console.log('Tokens Used:', data.usage?.total_tokens || 'N/A');
+  console.log('Finish Reason:', data.choices[0].finish_reason);
+  console.log('Content Preview:', data.choices[0].message.content.substring(0, 200) + '...');
+  console.log('=========================\n');
+  
   return data.choices[0].message.content;
 }
+
 
 // Analyze code using GPT
 export async function analyzeCode(code, filename, vibe) {
