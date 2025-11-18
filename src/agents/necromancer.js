@@ -1,7 +1,7 @@
 // Agent 2: The Necromancer — refactors/translates to modern syntax
 
-export async function runNecromancer(files, analysis, vibe, kiroAgent) {
-  const modernCode = await kiroAgent.modernize(files[0].content, analysis);
+export async function runNecromancer(files, analysis, vibe, kiroAgent, useFallback = false) {
+  const modernCode = await kiroAgent.modernize(files[0].content, analysis, useFallback);
 
   const narrations = {
     mentor: `I've refactored your code using modern best practices. The structure is cleaner and more maintainable now.`,

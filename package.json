@@ -8,7 +8,8 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "vite build",
     "preview": "vite preview",
-    "demo": "vite --open"
+    "demo": "vite --open",
+    "setup:check": "cd server && npm run check"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",

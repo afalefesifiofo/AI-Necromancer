@@ -1,14 +1,20 @@
-# AI Necromancer - Setup Guide
+# AI Necromancer Setup Guide
 
 ## Prerequisites
 
 - Node.js 18+ installed
-- Kiro IDE installed and configured
-- Terminal access
+- OpenAI API account with API key
 
-## Installation
+## Step-by-Step Setup
 
-### 1. Install Dependencies
+### 1. Get OpenAI API Key
+
+1. Go to https://platform.openai.com/api-keys
+2. Sign in or create an account
+3. Click "Create new secret key"
+4. Copy the key (starts with `sk-`)
+
+### 2. Install Dependencies
 
 ```bash
 # Install frontend dependencies
@@ -20,157 +26,106 @@ npm install
 cd ..
 ```
 
-### 2. Verify Kiro CLI
-
-Make sure Kiro CLI is available:
+### 3. Configure API Key
 
 ```bash
-kiro --version
+# Navigate to server directory
+cd server
+
+# Copy example env file
+cp .env.example .env
+
+# Edit .env file and add your API key
+# On Windows: notepad .env
+# On Mac/Linux: nano .env
 ```
 
-If not installed, follow Kiro's installation guide.
+Add your key to the `.env` file:
+```
+OPENAI_API_KEY=sk-your-actual-key-here
+```
 
-## Running the Application
+Save and close the file.
 
-### Option 1: Start Everything (Recommended)
+### 4. Start the Application
 
 ```bash
+# Go back to root directory
+cd ..
+
+# Start both frontend and backend
 npm run dev:full
 ```
 
-This starts both frontend and backend simultaneously.
+Or start them separately:
 
-### Option 2: Start Manually
-
-**Terminal 1 - Frontend:**
 ```bash
+# Terminal 1 - Backend
+cd server
+npm start
+
+# Terminal 2 - Frontend (in new terminal)
 npm run dev
 ```
 
-**Terminal 2 - Backend:**
-```bash
-npm run server
-```
+### 5. Open in Browser
 
-## Verification
+Navigate to: http://localhost:5174
 
-### Check Frontend
-Open http://localhost:5174 in your browser. You should see the AI Necromancer interface.
+## Verify Setup
 
-### Check Backend
-Open http://localhost:3001/api/health in your browser. You should see:
-```json
-{
-  "status": "ok",
-  "message": "AI Necromancer backend is running"
-}
-```
-
-### Check Kiro Integration
-1. Upload a test file in the UI
-2. Check the backend terminal for logs like:
-   - `📊 Analyzing filename.ext with necromancer vibe`
-   - `✓ Analysis complete: COBOL`
+1. Open the app in your browser
+2. Upload the example file: `examples/legacy-project.zip`
+3. Watch the processing - you should see real AI transformations
+4. Check the backend terminal for API calls
 
 ## Troubleshooting
 
-### Backend Won't Start
+### "OPENAI_API_KEY environment variable is not set"
+- Make sure `.env` file exists in `server/` directory
+- Check that the API key is correctly formatted
+- Restart the backend server after adding the key
 
-**Error:** `Cannot find module 'express'`
-**Solution:**
-```bash
-cd server
-npm install
-cd ..
-```
+### "Backend service not running"
+- Make sure the backend is started on port 3001
+- Check for port conflicts
+- Look for errors in the backend terminal
 
-### Kiro Agent Fails
+### "OpenAI API error: 401"
+- Your API key is invalid or expired
+- Get a new key from https://platform.openai.com/api-keys
 
-**Error:** `Failed to start Kiro agent`
-**Solution:**
-1. Verify Kiro CLI is installed: `kiro --version`
-2. Check that you're in the project directory
-3. Verify steering documents exist in `.kiro/steering/`
+### "OpenAI API error: 429"
+- You've exceeded your API rate limit
+- Check your OpenAI account usage and billing
 
-### Frontend Can't Connect to Backend
+### Backend won't start
+- Make sure you ran `npm install` in the `server/` directory
+- Check that port 3001 is not already in use
 
-**Error:** `Backend service not running`
-**Solution:**
-1. Make sure backend is running on port 3001
-2. Check for port conflicts: `netstat -ano | findstr :3001`
-3. Try restarting the backend
+## Cost Considerations
 
-### CORS Errors
+The app uses `gpt-4o-mini` which is very cost-effective:
+- ~$0.15 per 1M input tokens
+- ~$0.60 per 1M output tokens
 
-**Error:** `Access-Control-Allow-Origin`
-**Solution:** The backend already has CORS enabled. If you still see errors:
-1. Clear browser cache
-2. Restart both frontend and backend
-3. Check browser console for specific error details
+Typical file processing costs:
+- Small file (100 lines): ~$0.001
+- Medium file (500 lines): ~$0.005
+- Large file (2000 lines): ~$0.02
 
-## Development Tips
-
-### Hot Reload
-- Frontend: Vite provides instant hot reload
-- Backend: Restart manually after changes (or use nodemon)
-
-### Debugging
-- Frontend: Use browser DevTools (F12)
-- Backend: Check terminal output for logs
-- Kiro Agent: Logs appear in backend terminal
-
-### Testing Without UI
-Test backend endpoints directly:
-
-```bash
-# Health check
-curl http://localhost:3001/api/health
-
-# Analyze code
-curl -X POST http://localhost:3001/api/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"code":"var x = 1;","filename":"test.js","vibe":"necromancer"}'
-```
-
-## Production Build
-
-```bash
-# Build frontend
-npm run build
-
-# The dist/ folder contains the production build
-# Serve it with any static file server
-```
-
-## Environment Variables
-
-Create `.env` file in project root (optional):
-
-```env
-# Backend port (default: 3001)
-PORT=3001
-
-# Frontend port (default: 5174)
-VITE_PORT=5174
-
-# Backend URL for frontend
-VITE_BACKEND_URL=http://localhost:3001
-```
+Set usage limits in your OpenAI account to control costs.
 
 ## Next Steps
 
-Once everything is running:
-1. Try the test button: "🧪 Test with Sample Files"
-2. Upload `examples/legacy-project.zip`
-3. Watch the AI transform your code!
-4. Check the before/after comparisons
-5. Download the modernized project
+- Try the example files in `examples/`
+- Experiment with different vibes (Necromancer, Mentor, Professional)
+- Test different target languages (Python, JavaScript, TypeScript, Rust, Go)
+- Upload your own legacy code projects!
 
 ## Support
 
-If you encounter issues:
-1. Check this guide's troubleshooting section
-2. Review backend terminal logs
-3. Check browser console for errors
-4. Verify all dependencies are installed
-5. Ensure Kiro CLI is properly configured
+For issues or questions:
+- Check the main README.md
+- Review server/README.md for backend details
+- Check OpenAI API status: https://status.openai.com/

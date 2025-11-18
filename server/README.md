@@ -1,46 +1,107 @@
 # AI Necromancer Backend
 
-## Current Implementation
+Backend service that uses OpenAI's GPT API to analyze, modernize, and translate legacy code.
 
-The backend currently uses **intelligent rule-based transformations** because:
+## Setup
 
-1. `kiro chat` opens an interactive IDE session, not a CLI that returns output
-2. Kiro doesn't currently expose a programmatic API for batch processing
-3. The transformations are still intelligent and detect real issues
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-## What It Does
+2. **Configure OpenAI API Key**:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=sk-your-key-here
+   ```
+   
+   Get your API key from: https://platform.openai.com/api-keys
 
-### Analysis
-- Detects file types by extension
-- Scans code for actual issues (deprecated syntax, bad patterns)
-- Returns structured analysis
+3. **Start the server**:
+   ```bash
+   npm start
+   ```
+   
+   Server will run on http://localhost:3001
 
-### Modernization
-- JavaScript: `var` → `const`, function syntax updates
-- Python: Adds structure and comments
-- Other languages: Adds modernization headers
+## API Endpoints
 
-### Documentation
-- Generates README with overview
-- Creates changelog with all fixes
-- Lists issues found and resolved
+### POST /api/analyze
+Analyzes code to detect language, purpose, and issues.
 
-## Future: Real AI Integration
+**Request:**
+```json
+{
+  "code": "string",
+  "filename": "string",
+  "vibe": "necromancer|mentor|professional"
+}
+```
 
-To integrate real AI, you would need:
+**Response:**
+```json
+{
+  "language": "string",
+  "purpose": "string",
+  "issues": ["string"],
+  "lineCount": number
+}
+```
 
-1. **Kiro Extension API**: Build a Kiro extension that exposes an HTTP endpoint
-2. **External LLM**: Use OpenAI, Anthropic, or another LLM API
-3. **Kiro Agent System**: Wait for Kiro to release a programmatic agent API
+### POST /api/modernize
+Modernizes or translates code to target language.
 
-## For the Hackathon
+**Request:**
+```json
+{
+  "code": "string",
+  "analysis": { "language": "string", "purpose": "string", "issues": [] },
+  "vibe": "string",
+  "targetLanguage": "modernize|javascript|python|typescript|rust|go"
+}
+```
 
-The current implementation is **perfect for the demo** because:
-- ✅ Fully functional end-to-end
-- ✅ Processes entire ZIP files
-- ✅ Shows multi-agent architecture
-- ✅ Demonstrates vibe coding concept
-- ✅ Real before/after comparisons
-- ✅ Actual code improvements
+**Response:**
+```json
+{
+  "code": "string"
+}
+```
 
-The concept and architecture are what matter for the hackathon submission!
+### POST /api/document
+Generates documentation for the transformation.
+
+**Request:**
+```json
+{
+  "analysis": { "language": "string", "purpose": "string", "issues": [], "lineCount": number },
+  "vibe": "string",
+  "targetLanguage": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "readme": "markdown string",
+  "changelog": "markdown string"
+}
+```
+
+## Features
+
+- **GPT-4 Powered**: Uses OpenAI's GPT-4o-mini for intelligent code transformation
+- **Multi-Language**: Supports COBOL, PHP, ActionScript, JavaScript, Python, and more
+- **Translation**: Convert between languages (COBOL→Python, PHP→JavaScript, etc.)
+- **Vibe Modes**: Adjusts AI tone (dramatic, educational, or professional)
+- **Fallback**: Basic transformations if API key is missing
+
+## Cost Optimization
+
+- Uses `gpt-4o-mini` model for cost-effective processing
+- Limits token usage with max_tokens parameter
+- Caches analysis results when possible

@@ -10,10 +10,32 @@ AI Necromancer is a browser-based tool that resurrects obsolete codebases using 
 
 ## 🚀 Quick Start
 
+### 1. Setup OpenAI API Key
+
 ```bash
-# Install dependencies
+# In the server directory, create .env file
+cd server
+cp .env.example .env
+# Edit .env and add your OpenAI API key
+```
+
+Get your API key from: https://platform.openai.com/api-keys
+
+### 2. Install Dependencies
+
+```bash
+# Install frontend dependencies
 npm install
 
+# Install backend dependencies
+cd server
+npm install
+cd ..
+```
+
+### 3. Start the Application
+
+```bash
 # Start both frontend and backend
 npm run dev:full
 ```
@@ -72,13 +94,21 @@ Transform legacy code into modern languages:
 
 ## 🤖 AI Integration
 
-The app uses the Kiro API for intelligent code modernization:
+The app uses **OpenAI's GPT-4** for intelligent code analysis, modernization, and translation:
 
-1. **In Kiro IDE**: Automatically uses `window.kiro.chat()` API
-2. **Standalone**: Set `VITE_KIRO_API_KEY` in `.env` file
-3. **Fallback**: Uses rule-based transformations if API unavailable
+1. **Code Analysis**: GPT analyzes the language, purpose, and issues in legacy code
+2. **Modernization**: Transforms code to modern syntax and best practices
+3. **Translation**: Converts code between languages (COBOL→Python, PHP→JavaScript, etc.)
+4. **Documentation**: Generates README and changelog for each transformation
+5. **Fallback**: Uses rule-based transformations if API is unavailable
 
 The AI agents use the selected "vibe" (Mentor/Engineer/Necromancer) to adjust their tone and style.
+
+### API Configuration
+
+- Set `OPENAI_API_KEY` in `server/.env`
+- Uses `gpt-4o-mini` model for fast, cost-effective processing
+- Fallback to basic transformations if API key is missing
 
 ## 🗓️ Development Plan
 

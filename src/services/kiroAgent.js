@@ -32,7 +32,18 @@ export class KiroAgent {
       });
 
       if (!response.ok) {
-        throw new Error(`Backend API error: ${response.status}`);
+        console.log(`❌ Backend returned status: ${response.status}`);
+        // Try to get error details from response
+        try {
+          const errorData = await response.json();
+          console.log('Error data:', errorData);
+          const errorMessage = errorData.error || `Backend API error: ${response.status}`;
+          console.log('Throwing error:', errorMessage);
+          throw new Error(errorMessage);
+        } catch (parseError) {
+          console.log('Failed to parse error, throwing generic error');
+          throw new Error(`Backend API error: ${response.status}`);
+        }
       }
 
       const result = await response.json();
@@ -59,14 +70,15 @@ export class KiroAgent {
     };
   }
 
-  async modernize(code, analysis) {
-    console.log('Modernize called with targetLanguage:', this.targetLanguage);
+  async modernize(code, analysis, useFallback = false) {
+    console.log('Modernize called with targetLanguage:', this.targetLanguage, useFallback ? '(fallback mode)' : '');
     
     const response = await this.callBackendAPI('modernize', {
       code,
       analysis,
       vibe: this.vibe,
       targetLanguage: this.targetLanguage,
+      useFallback,
     });
     
     return response.code;

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import BatchProgress from './BatchProgress';
 import FileResultCard from './FileResultCard';
 import DebugPanel from './DebugPanel';
+import ApiStatusBanner from './ApiStatusBanner';
 import { runArchaeologist } from '../agents/archaeologist';
 import { runNecromancer } from '../agents/necromancer';
 import { runChronicler } from '../agents/chronicler';
@@ -15,6 +16,8 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
   const [results, setResults] = useState([]);
   const [kiroAgent] = useState(() => new KiroAgent(vibe, targetLanguage));
   const [hasStarted, setHasStarted] = useState(false);
+  const [apiError, setApiError] = useState(null);
+  const [useFallbackMode, setUseFallbackMode] = useState(false);
 
   useEffect(() => {
     if (!hasStarted && files && files.length > 0) {
@@ -45,7 +48,7 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
         
         // Modernize
         console.log('  - Modernizing...');
-        const revived = await runNecromancer([file], analysis, vibe, kiroAgent);
+        const revived = await runNecromancer([file], analysis, vibe, kiroAgent, useFallbackMode);
         
         // Document
         console.log('  - Documenting...');
@@ -61,6 +64,21 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
         console.log('  ✓ Success');
       } catch (error) {
         console.error('  ✗ Error:', error);
+        console.log('Error message:', error.message);
+        console.log('Use fallback mode:', useFallbackMode);
+        
+        // Check if it's a quota error
+        const errorMsg = error.message || '';
+        const isQuotaError = errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('exceeded');
+        console.log('Is quota error:', isQuotaError);
+        
+        if (isQuotaError && !useFallbackMode) {
+          console.log('Setting API error and stopping processing');
+          setApiError(error.message);
+          setProcessing(false);
+          return; // Stop processing
+        }
+        
         processedResults.push({
           file,
           status: 'error',
@@ -109,13 +127,39 @@ Generated on ${new Date().toLocaleString()}
     a.click();
   };
 
+  const handleUseFallback = () => {
+    setApiError(null);
+    setUseFallbackMode(true);
+    // Restart processing with fallback mode
+    processAllFiles();
+  };
+
+  const handleDismissError = () => {
+    setApiError(null);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
+      <ApiStatusBanner 
+        error={apiError}
+        onUseFallback={handleUseFallback}
+        onDismiss={handleDismissError}
+      />
+      
       <DebugPanel files={files} />
+      
+      {useFallbackMode && (
+        <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 text-center">
+          <p className="text-yellow-400 font-bold">🔄 Fallback Mode Active</p>
+          <p className="text-yellow-200 text-sm mt-1">
+            Using basic transformations without AI API
+          </p>
+        </div>
+      )}
       
       <BatchProgress
         total={files.length}

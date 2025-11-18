@@ -8,94 +8,142 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Function to call Kiro CLI chat
-async function callKiroAgent(prompt, steeringDoc = null) {
-  return new Promise((resolve, reject) => {
-    const args = ['chat'];
-    
-    // Add prompt as argument
-    args.push(prompt);
-    
-    // On Windows, use kiro.cmd
-    const kiroCommand = process.platform === 'win32' ? 'kiro.cmd' : 'kiro';
-    
-    console.log('Calling:', kiroCommand, args.slice(0, 2).join(' '), '...');
-    
-    const kiro = spawn(kiroCommand, args, {
-      cwd: join(__dirname, '..'),
-      shell: true, // Required for .cmd files on Windows
-    });
+// OpenAI API configuration
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-    let output = '';
-    let errorOutput = '';
-
-    kiro.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-
-    kiro.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-
-    kiro.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Kiro agent failed: ${errorOutput}`));
-      } else {
-        resolve(output);
-      }
-    });
-
-    kiro.on('error', (error) => {
-      reject(new Error(`Failed to start Kiro agent: ${error.message}`));
-    });
-  });
-}
-
-// Analyze code
-export async function analyzeCode(code, filename, vibe) {
-  // For demo purposes, use intelligent mock analysis
-  const ext = filename.split('.').pop().toLowerCase();
-  const langMap = {
-    cob: 'COBOL',
-    cbl: 'COBOL',
-    php: 'PHP 5',
-    as: 'ActionScript 2.0',
-    js: 'JavaScript ES5',
-    jsx: 'JavaScript ES5',
-    py: 'Python 2.7',
-    rb: 'Ruby 1.8',
-    jcl: 'JCL (Job Control Language)',
-    md: 'Markdown',
-    txt: 'Plain Text',
-  };
-
-  const language = langMap[ext] || 'Unknown';
-  const issues = [];
-  
-  // Detect actual issues
-  if (code.includes('var ')) issues.push('Uses var instead of const/let');
-  if (code.includes('mysql_')) issues.push('Uses deprecated mysql_ functions');
-  if (code.includes('$.ajax')) issues.push('Uses jQuery instead of fetch');
-  if (code.includes('IDENTIFICATION DIVISION')) issues.push('Legacy COBOL syntax');
-  if (code.includes('//JOB')) issues.push('Mainframe JCL - platform specific');
-  
-  if (issues.length === 0) {
-    issues.push('Legacy patterns detected');
-    issues.push('Could benefit from modernization');
+// Function to call OpenAI GPT API
+async function callGPT(prompt, systemPrompt = 'You are a helpful AI assistant.') {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
   }
 
-  return {
-    language,
-    purpose: `${language} code for business logic processing`,
-    issues: issues.slice(0, 3),
-  };
+  const response = await fetch(OPENAI_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
 }
 
-// Modernize or translate code
-export async function modernizeCode(code, analysis, vibe, targetLanguage) {
-  // For demo purposes, apply basic transformations
+// Analyze code using GPT
+export async function analyzeCode(code, filename, vibe) {
+  const systemPrompt = `You are a code analysis expert. Analyze code and identify the language, purpose, and issues. Be ${vibe === 'necromancer' ? 'dramatic and theatrical' : vibe === 'mentor' ? 'educational and encouraging' : 'concise and professional'}.`;
+  
+  const prompt = `Analyze this code from file "${filename}":
+
+\`\`\`
+${code}
+\`\`\`
+
+Return ONLY a JSON object with this exact structure:
+{
+  "language": "detected language and version",
+  "purpose": "brief description of what the code does",
+  "issues": ["issue 1", "issue 2", "issue 3"]
+}`;
+
+  try {
+    const response = await callGPT(prompt, systemPrompt);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('Invalid JSON response from GPT');
+  } catch (error) {
+    console.error('GPT analysis failed, using fallback:', error.message);
+    // Fallback to basic analysis
+    const ext = filename.split('.').pop().toLowerCase();
+    const langMap = {
+      cob: 'COBOL', cbl: 'COBOL', php: 'PHP 5', as: 'ActionScript 2.0',
+      js: 'JavaScript ES5', jsx: 'JavaScript ES5', py: 'Python 2.7',
+      rb: 'Ruby 1.8', jcl: 'JCL', md: 'Markdown', txt: 'Plain Text',
+    };
+    return {
+      language: langMap[ext] || 'Unknown',
+      purpose: 'Code analysis',
+      issues: ['Legacy patterns detected', 'Could benefit from modernization'],
+    };
+  }
+}
+
+// Modernize or translate code using GPT
+export async function modernizeCode(code, analysis, vibe, targetLanguage, forceFallback = false) {
+  // If fallback is forced, skip API call
+  if (forceFallback) {
+    console.log('Using forced fallback mode');
+    return applyFallbackTransformation(code, analysis, targetLanguage);
+  }
+  const vibeInstructions = {
+    necromancer: 'Be dramatic and theatrical about bringing dead code back to life',
+    mentor: 'Be educational and explain the improvements',
+    professional: 'Be concise and focus on best practices',
+  };
+
+  const systemPrompt = `You are an expert code modernization specialist. ${vibeInstructions[vibe] || vibeInstructions.professional}`;
+  
+  let prompt;
+  if (targetLanguage === 'modernize') {
+    prompt = `Modernize this ${analysis.language} code to use current best practices and modern syntax:
+
+\`\`\`
+${code}
+\`\`\`
+
+Issues to fix:
+${analysis.issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')}
+
+Return ONLY the modernized code without explanations or markdown formatting.`;
+  } else {
+    prompt = `Translate this ${analysis.language} code to ${targetLanguage}:
+
+\`\`\`
+${code}
+\`\`\`
+
+Requirements:
+- Maintain the same functionality
+- Use ${targetLanguage} best practices and idioms
+- Add brief comments explaining key translations
+- Make it production-ready
+
+Return ONLY the translated code without explanations or markdown formatting.`;
+  }
+
+  try {
+    const response = await callGPT(prompt, systemPrompt);
+    // Remove markdown code blocks if present
+    let cleanCode = response.replace(/```[\w]*\n?/g, '').trim();
+    return cleanCode;
+  } catch (error) {
+    console.error('GPT modernization failed:', error.message);
+    // Don't use fallback automatically - throw the error so frontend can handle it
+    throw error;
+  }
+}
+
+// Fallback transformation when API is unavailable
+function applyFallbackTransformation(code, analysis, targetLanguage) {
   let modernized = code;
-  const header = `// Modernized from ${analysis.language}\n// Target: ${targetLanguage}\n// Generated by AI Necromancer\n\n`;
+  const header = `# Transformed from ${analysis.language}\n# Target: ${targetLanguage}\n# Generated by AI Necromancer (Fallback Mode)\n\n`;
   
   if (targetLanguage === 'modernize') {
     // Apply basic modernization
@@ -104,56 +152,71 @@ export async function modernizeCode(code, analysis, vibe, targetLanguage) {
         .replace(/var\s+/g, 'const ')
         .replace(/function\s+(\w+)\s*\(/g, 'const $1 = (');
     }
+    return modernized;
   } else if (targetLanguage === 'python') {
     // Simple translation to Python
-    modernized = `# Translated from ${analysis.language} to Python 3\n\n`;
+    modernized = `# Translated from ${analysis.language} to Python 3\n`;
+    modernized += `# Note: Using fallback mode - manual review recommended\n\n`;
     modernized += `# Original code preserved as comment:\n`;
     modernized += code.split('\n').map(line => `# ${line}`).join('\n');
     modernized += `\n\n# TODO: Implement Python equivalent\npass\n`;
+    return modernized;
   } else {
-    modernized = header + code;
+    // Generic fallback
+    return header + code;
   }
-  
-  return modernized;
 }
 
-// Generate documentation
+// Generate documentation using GPT
 export async function generateDocumentation(analysis, vibe, targetLanguage) {
-  const transformationType = targetLanguage === 'modernize' 
-    ? 'Modernization'
-    : `Translation to ${targetLanguage}`;
+  const systemPrompt = `You are a technical documentation writer. Be ${vibe === 'necromancer' ? 'dramatic about code resurrection' : vibe === 'mentor' ? 'educational and thorough' : 'clear and professional'}.`;
   
-  return {
-    readme: `# ${transformationType} - ${analysis.language}
+  const transformationType = targetLanguage === 'modernize' 
+    ? 'modernization'
+    : `translation to ${targetLanguage}`;
+  
+  const prompt = `Generate documentation for a code ${transformationType}.
+
+Original code details:
+- Language: ${analysis.language}
+- Purpose: ${analysis.purpose}
+- Issues fixed: ${analysis.issues.join(', ')}
+- Lines: ${analysis.lineCount}
+
+Return ONLY a JSON object with this structure:
+{
+  "readme": "markdown README with overview, features, usage examples",
+  "changelog": "markdown changelog with all changes and improvements"
+}`;
+
+  try {
+    const response = await callGPT(prompt, systemPrompt);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('Invalid JSON response from GPT');
+  } catch (error) {
+    console.error('GPT documentation failed, using fallback:', error.message);
+    // Fallback documentation
+    return {
+      readme: `# ${transformationType.charAt(0).toUpperCase() + transformationType.slice(1)} - ${analysis.language}
 
 ## Overview
 This code has been automatically ${targetLanguage === 'modernize' ? 'modernized' : 'translated'} from ${analysis.language}.
 
-## Original Analysis
-- **Language**: ${analysis.language}
-- **Purpose**: ${analysis.purpose}
-- **Issues Found**: ${analysis.issues.length}
-
 ## Changes Applied
-${analysis.issues.map(issue => `- Fixed: ${issue}`).join('\n')}
-
-## Usage
-The transformed code is ready to use in modern environments.
+${analysis.issues.map(issue => `- ${issue}`).join('\n')}
 
 ---
 *Generated by AI Necromancer*`,
-    
-    changelog: `## Changelog
+      
+      changelog: `## Changelog
 
-### ${transformationType}
+### ${transformationType.charAt(0).toUpperCase() + transformationType.slice(1)}
 - Source: ${analysis.language}
-${targetLanguage !== 'modernize' ? `- Target: ${targetLanguage}\n` : ''}- Issues resolved: ${analysis.issues.length}
-- Lines processed: ${analysis.lineCount}
-
-### Fixes Applied
-${analysis.issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')}
-
----
-*Date: ${new Date().toLocaleDateString()}*`,
-  };
+- Issues resolved: ${analysis.issues.length}
+- Date: ${new Date().toLocaleDateString()}`,
+    };
+  }
 }
