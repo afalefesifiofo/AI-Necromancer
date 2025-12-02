@@ -88,10 +88,9 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
 
       setResults([...processedResults]);
       
-      // Add a small delay between files to avoid overwhelming the API
+      // Small delay between files for UI responsiveness
       if (i < files.length - 1) {
-        console.log('⏱️  Waiting 500ms before next file...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
@@ -100,13 +99,41 @@ export default function BatchLaboratory({ files, vibe, targetLanguage, onReset }
     setCurrentIndex(files.length);
   };
 
+  const getNewFileName = (originalName, targetLang) => {
+    // If modernizing (not translating), keep original extension
+    if (targetLang === 'modernize') {
+      return originalName;
+    }
+
+    // Keep documentation and config files unchanged
+    const keepOriginalExtensions = ['.md', '.txt', '.json', '.xml', '.yaml', '.yml', '.toml', '.ini', '.cfg'];
+    const currentExt = originalName.match(/\.[^/.]+$/)?.[0]?.toLowerCase();
+    if (currentExt && keepOriginalExtensions.includes(currentExt)) {
+      return originalName;
+    }
+
+    // Map target languages to file extensions for code files
+    const extensionMap = {
+      javascript: '.js',
+      python: '.py',
+      typescript: '.ts',
+      rust: '.rs',
+      go: '.go',
+    };
+
+    const newExt = extensionMap[targetLang] || '.txt';
+    const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
+    return nameWithoutExt + newExt;
+  };
+
   const downloadAll = async () => {
     const zip = new JSZip();
     const modernFolder = zip.folder('modernized');
 
     results.forEach((result) => {
       if (result.status === 'success') {
-        modernFolder.file(result.file.name, result.revived.code);
+        const newFileName = getNewFileName(result.file.name, targetLanguage);
+        modernFolder.file(newFileName, result.revived.code);
       }
     });
 
@@ -196,7 +223,7 @@ Generated on ${new Date().toLocaleString()}
 
       <div className="space-y-4">
         {results.map((result, index) => (
-          <FileResultCard key={index} result={result} index={index} />
+          <FileResultCard key={index} result={result} index={index} targetLanguage={targetLanguage} />
         ))}
       </div>
 

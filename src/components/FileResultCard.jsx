@@ -1,8 +1,33 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
-export default function FileResultCard({ result, index }) {
+export default function FileResultCard({ result, index, targetLanguage }) {
   const [expanded, setExpanded] = useState(false);
+
+  const getNewFileName = (originalName, targetLang) => {
+    if (targetLang === 'modernize') return originalName;
+    
+    // Keep documentation and config files unchanged
+    const keepOriginalExtensions = ['.md', '.txt', '.json', '.xml', '.yaml', '.yml', '.toml', '.ini', '.cfg'];
+    const currentExt = originalName.match(/\.[^/.]+$/)?.[0]?.toLowerCase();
+    if (currentExt && keepOriginalExtensions.includes(currentExt)) {
+      return originalName;
+    }
+    
+    const extensionMap = {
+      javascript: '.js',
+      python: '.py',
+      typescript: '.ts',
+      rust: '.rs',
+      go: '.go',
+    };
+    
+    const newExt = extensionMap[targetLang] || '.txt';
+    const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
+    return nameWithoutExt + newExt;
+  };
+
+  const newFileName = getNewFileName(result.file.name, targetLanguage);
 
   if (result.status === 'error') {
     return (
@@ -37,7 +62,12 @@ export default function FileResultCard({ result, index }) {
         <div className="flex items-center gap-3">
           <span className="text-3xl">✅</span>
           <div className="flex-1">
-            <div className="font-bold text-necro-green">{result.file.name}</div>
+            <div className="font-bold text-necro-green">
+              {result.file.name}
+              {targetLanguage !== 'modernize' && (
+                <span className="text-necro-purple ml-2">→ {newFileName}</span>
+              )}
+            </div>
             <div className="text-sm text-gray-400">{result.file.path}</div>
             <div className="text-xs text-gray-500 mt-1">
               {result.analysis.language} • {result.analysis.lineCount} lines • {result.analysis.issues.length} issues fixed
@@ -88,12 +118,12 @@ export default function FileResultCard({ result, index }) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = result.file.name;
+                a.download = newFileName;
                 a.click();
               }}
               className="bg-necro-purple hover:bg-necro-purple/80 px-4 py-2 rounded text-sm font-bold transition-colors"
             >
-              Download This File
+              Download {newFileName}
             </button>
           </div>
         </motion.div>

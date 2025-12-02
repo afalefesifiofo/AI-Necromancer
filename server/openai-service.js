@@ -12,9 +12,14 @@ const __dirname = dirname(__filename);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Rate limiting
+// Rate limiting configuration
+// OpenAI free tier: 3 RPM (Requests Per Minute)
+// To stay within limits: 60 seconds / 3 requests = 20 seconds per request
+// Adjust RATE_LIMIT_DELAY based on your tier:
+// - Free tier (3 RPM): 20000ms (20 seconds)
+// - Tier 1+ (60 RPM): 1000ms (1 second)
+const RATE_LIMIT_DELAY = parseInt(process.env.RATE_LIMIT_DELAY || '20000');
 let lastApiCallTime = 0;
-const MIN_DELAY_BETWEEN_CALLS = 1000; // 1 second between calls
 
 // Sleep function
 function sleep(ms) {
@@ -30,9 +35,9 @@ async function callGPT(prompt, systemPrompt = 'You are a helpful AI assistant.')
   // Rate limiting: ensure minimum delay between API calls
   const now = Date.now();
   const timeSinceLastCall = now - lastApiCallTime;
-  if (timeSinceLastCall < MIN_DELAY_BETWEEN_CALLS) {
-    const delayNeeded = MIN_DELAY_BETWEEN_CALLS - timeSinceLastCall;
-    console.log(`⏱️  Rate limiting: waiting ${delayNeeded}ms before next API call...`);
+  if (timeSinceLastCall < RATE_LIMIT_DELAY) {
+    const delayNeeded = RATE_LIMIT_DELAY - timeSinceLastCall;
+    console.log(`⏱️  Rate limiting: waiting ${(delayNeeded/1000).toFixed(1)}s before next API call (${RATE_LIMIT_DELAY/1000}s minimum)...`);
     await sleep(delayNeeded);
   }
   lastApiCallTime = Date.now();
