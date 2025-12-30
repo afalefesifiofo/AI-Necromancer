@@ -1,4 +1,4 @@
-# ⚡ AI Necromancer
+# ⚡ AI Necromancer (Kiroween Hackathon 2025)
 
 **Tagline:** "We bring legacy code back from the dead — analyzed, re-written, and re-animated with AI."
 
